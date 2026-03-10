@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="ATRCalc" />
+  <meta name="theme-color" content="#111111" />
+  <title>ATRCalc — Hougaard Method</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;600;700&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #111;
+      --card: #1a1a1a;
+      --card2: #222;
+      --border: #2a2a2a;
+      --accent: #c8ff00;
+      --red: #ff6b6b;
+      --blue: #4a9eff;
+      --green: #4aff88;
+      --text: #eee;
+      --muted: #555;
+      --font: 'IBM Plex Mono', 'Courier New', monospace;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      -webkit-font-smoothing: antialiased;
+      overscroll-behavior: none;
+    }
+
+    body {
+      padding: env(safe-area-inset-top, 20px) env(safe-area-inset-right, 0) env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);
+    }
+
+    .scroll-wrap {
+      height: 100vh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 24px 16px 48px;
+    }
+
+    .container { max-width: 520px; margin: 0 auto; }
+
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 28px;
+    }
+    .logo { font-size: 20px; font-weight: 700; letter-spacing: 4px; }
+    .logo span { color: var(--accent); }
+    .badge {
+      font-size: 9px; letter-spacing: 2px; color: var(--muted);
+      border: 1px solid #333; padding: 4px 10px; border-radius: 4px;
+    }
+
+    /* Section */
+    .section { margin-bottom: 22px; }
+    .section-label {
+      font-size: 9px; letter-spacing: 3px; color: var(--muted);
+      margin-bottom: 10px; text-transform: uppercase;
+    }
+
+    /* Card */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    /* Instruments */
+    .instruments { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+    .inst-btn {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 4px;
+      cursor: pointer;
+      color: var(--muted);
+      text-align: center;
+      transition: all 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .inst-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #000;
+    }
+    .inst-icon { font-size: 18px; margin-bottom: 4px; }
+    .inst-label { font-size: 9px; font-weight: 700; letter-spacing: 1px; font-family: var(--font); }
+    .inst-sub { font-size: 8px; opacity: 0.7; font-family: var(--font); }
+
+    /* Capital row */
+    .capital-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .field-label {
+      font-size: 9px; color: var(--muted); letter-spacing: 2px; margin-bottom: 8px;
+    }
+    .big-input-wrap { display: flex; align-items: center; gap: 6px; flex: 1; }
+    .currency-sym { font-size: 26px; color: #888; }
+    .big-input {
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-family: var(--font);
+      font-size: 28px;
+      font-weight: 700;
+      outline: none;
+      width: 100%;
+      -webkit-appearance: none;
+    }
+    .big-input::-webkit-outer-spin-button,
+    .big-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+    .currency-btn {
+      background: #2a2a2a; border: 1px solid #333; border-radius: 6px;
+      color: #888; font-size: 10px; padding: 6px 10px; cursor: pointer;
+      letter-spacing: 1px; font-family: var(--font); margin-top: 4px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* ATR unit toggle */
+    .unit-toggle { display: flex; gap: 6px; margin-top: 4px; }
+    .unit-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 4px; color: var(--muted);
+      font-size: 9px; padding: 4px 8px; cursor: pointer;
+      letter-spacing: 1px; font-family: var(--font);
+      -webkit-tap-highlight-color: transparent;
+      transition: all 0.15s;
+    }
+    .unit-btn.active { border-color: var(--accent); color: var(--accent); background: #1e2a00; }
+
+    /* Risk buttons */
+    .risk-header {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;
+    }
+    .risk-value { font-size: 16px; color: var(--accent); font-weight: 700; }
+    .risk-btns { display: flex; gap: 6px; margin-bottom: 16px; }
+    .risk-btn {
+      flex: 1; padding: 10px 0;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 6px; color: var(--muted);
+      font-size: 11px; cursor: pointer; font-family: var(--font);
+      -webkit-tap-highlight-color: transparent;
+      transition: all 0.15s;
+    }
+    .risk-btn.active {
+      background: var(--accent); border-color: var(--accent); color: #000; font-weight: 700;
+    }
+
+    /* Slider */
+    input[type=range] {
+      -webkit-appearance: none;
+      width: 100%; height: 4px;
+      background: linear-gradient(to right, var(--accent) 0%, var(--accent) var(--val, 20%), #333 var(--val, 20%), #333 100%);
+      border-radius: 2px; outline: none; cursor: pointer;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      box-shadow: 0 0 10px #c8ff0060;
+    }
+
+    /* SL Multiplier */
+    .sl-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .sl-btn {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px; padding: 14px 8px;
+      cursor: pointer; color: var(--muted);
+      text-align: center; font-family: var(--font);
+      -webkit-tap-highlight-color: transparent;
+      transition: all 0.15s;
+    }
+    .sl-btn.active {
+      background: #1e2a00; border-color: var(--accent); color: var(--accent);
+    }
+    .sl-val { font-size: 18px; font-weight: 700; }
+    .sl-desc { font-size: 8px; letter-spacing: 1px; margin-top: 4px; opacity: 0.8; }
+
+    /* Results */
+    .results-header {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;
+    }
+    .live-dot {
+      display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--green);
+    }
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    .results-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .result-label { font-size: 9px; color: var(--muted); letter-spacing: 2px; margin-bottom: 6px; }
+    .result-val { font-size: 28px; font-weight: 700; }
+    .result-unit { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+    /* Position size card */
+    .pos-card {
+      background: #151f00;
+      border: 1px solid #2a3a00;
+      border-radius: 12px;
+      padding: 16px;
+      margin-top: 8px;
+    }
+    .pos-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .pos-title { font-size: 10px; color: #8aaa00; letter-spacing: 2px; }
+    .pos-val { font-size: 36px; font-weight: 700; color: var(--accent); }
+    .pos-sub { font-size: 11px; color: #556600; margin-top: 4px; }
+
+    /* Summary */
+    .summary-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      margin-top: 8px;
+    }
+    .summary-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .summary-title { font-size: 10px; color: var(--muted); letter-spacing: 2px; }
+    .summary-text { font-size: 12px; color: #888; line-height: 1.9; }
+    .summary-text b { font-weight: 700; }
+    .hl-yellow { color: var(--accent); }
+    .hl-red { color: var(--red); }
+    .hl-blue { color: var(--blue); }
+    .hl-white { color: #fff; }
+  </style>
+</head>
+<body>
+<div class="scroll-wrap">
+  <div class="container">
+
+    <!-- Header -->
+    <div class="header">
+      <div class="logo">ATR<span>CALC</span></div>
+      <div class="badge">HOUGAARD METHOD</div>
+    </div>
+
+    <!-- Instrument -->
+    <div class="section">
+      <div class="section-label">Instrument</div>
+      <div class="instruments" id="instruments">
+        <button class="inst-btn" data-id="forex" onclick="selectInstrument('forex')">
+          <div class="inst-icon">📊</div>
+          <div class="inst-label">FOREX</div>
+          <div class="inst-sub">loty</div>
+        </button>
+        <button class="inst-btn active" data-id="index" onclick="selectInstrument('index')">
+          <div class="inst-icon">📈</div>
+          <div class="inst-label">INDEKS</div>
+          <div class="inst-sub">jedn.</div>
+        </button>
+        <button class="inst-btn" data-id="gold" onclick="selectInstrument('gold')">
+          <div class="inst-icon">🥇</div>
+          <div class="inst-label">GOLD</div>
+          <div class="inst-sub">uncje</div>
+        </button>
+        <button class="inst-btn" data-id="oil" onclick="selectInstrument('oil')">
+          <div class="inst-icon">🛢️</div>
+          <div class="inst-label">ROPA</div>
+          <div class="inst-sub">baryłki</div>
+        </button>
+        <button class="inst-btn" data-id="stocks" onclick="selectInstrument('stocks')">
+          <div class="inst-icon">📋</div>
+          <div class="inst-label">AKCJE</div>
+          <div class="inst-sub">sztuki</div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Capital -->
+    <div class="section">
+      <div class="section-label">Twój Kapitał</div>
+      <div class="card">
+        <div class="capital-row">
+          <div style="flex:1">
+            <div class="field-label">KAPITAŁ NA KONCIE</div>
+            <div class="big-input-wrap">
+              <span class="currency-sym" id="currSym">£</span>
+              <input class="big-input" type="number" id="capital" value="10000" oninput="calc()" />
+            </div>
+          </div>
+          <button class="currency-btn" id="currBtn" onclick="cycleCurrency()">GBP</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ATR -->
+    <div class="section">
+      <div class="section-label">ATR z Wykresu</div>
+      <div class="card">
+        <div class="capital-row">
+          <div style="flex:1">
+            <div class="field-label">ATR (14) — WARTOŚĆ N</div>
+            <input class="big-input" type="number" id="atr" value="160" oninput="calc()" />
+          </div>
+          <div class="unit-toggle">
+            <button class="unit-btn" id="unit-pips" onclick="selectUnit('pips')">pips</button>
+            <button class="unit-btn active" id="unit-punktow" onclick="selectUnit('punktow')">punktów</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Risk -->
+    <div class="section">
+      <div class="section-label">Ryzyko na Trade</div>
+      <div class="card">
+        <div class="risk-header">
+          <div class="field-label">% KAPITAŁU DO RYZYKOWANIA</div>
+          <div class="risk-value" id="riskDisplay">2.0%</div>
+        </div>
+        <div class="risk-btns">
+          <button class="risk-btn" onclick="selectRisk(0.5)">0.5%</button>
+          <button class="risk-btn" onclick="selectRisk(1)">1%</button>
+          <button class="risk-btn active" onclick="selectRisk(2)">2%</button>
+          <button class="risk-btn" onclick="selectRisk(3)">3%</button>
+          <button class="risk-btn" onclick="selectRisk(5)">5%</button>
+        </div>
+        <input type="range" id="riskSlider" min="0.1" max="10" step="0.1" value="2"
+          oninput="onSlider(this.value)" style="--val:20%" />
+      </div>
+    </div>
+
+    <!-- SL Multiplier -->
+    <div class="section">
+      <div class="section-label">Mnożnik Stop-Lossa (Hougaard: 2×N)</div>
+      <div class="sl-grid">
+        <button class="sl-btn" onclick="selectSL(1)">
+          <div class="sl-val">1×</div><div class="sl-desc">AGRESYWNY</div>
+        </button>
+        <button class="sl-btn active" onclick="selectSL(2)">
+          <div class="sl-val">2×</div><div class="sl-desc">HOUGAARD</div>
+        </button>
+        <button class="sl-btn" onclick="selectSL(2.5)">
+          <div class="sl-val">2.5×</div><div class="sl-desc">UMIARK.</div>
+        </button>
+        <button class="sl-btn" onclick="selectSL(3)">
+          <div class="sl-val">3×</div><div class="sl-desc">OSTROŻNY</div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div class="section">
+      <div class="section-label">Wyniki Kalkulacji</div>
+      <div class="card">
+        <div class="results-header">
+          <div class="field-label">PARAMETRY POZYCJI</div>
+          <div class="live-dot"><span class="dot"></span>Live</div>
+        </div>
+        <div class="results-grid">
+          <div>
+            <div class="result-label">N = ATR</div>
+            <div class="result-val" id="res-atr" style="color:var(--accent)">160</div>
+            <div class="result-unit">punktów</div>
+          </div>
+          <div>
+            <div class="result-label" id="sl-label">STOP-LOSS (2×N)</div>
+            <div class="result-val" id="res-sl" style="color:var(--red)">320</div>
+            <div class="result-unit">punktów okay</div>
+          </div>
+          <div>
+            <div class="result-label">MAX. RYZYKO</div>
+            <div class="result-val" id="res-risk" style="color:var(--red)">£200</div>
+            <div class="result-unit">w walucie konta</div>
+          </div>
+          <div>
+            <div class="result-label">TARGET (3×SL)</div>
+            <div class="result-val" id="res-target" style="color:var(--blue)">960</div>
+            <div class="result-unit" id="res-rr">R:R 1:3</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pos-card">
+        <div class="pos-header">
+          <span>🎯</span>
+          <span class="pos-title">ROZMIAR POZYCJI</span>
+        </div>
+        <div class="pos-val" id="res-size">£0.63</div>
+        <div class="pos-sub" id="res-size-sub">£0.63 / punkt</div>
+      </div>
+
+      <div class="summary-card">
+        <div class="summary-header">
+          <span>📋</span>
+          <span class="summary-title">PODSUMOWANIE TRADE</span>
+        </div>
+        <div class="summary-text" id="summary"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  const currencies = ['USD','GBP','PLN'];
+  const symbols = ['$','£','zł'];
+  const instruments = {
+    forex: {label:'FOREX', sub:'loty'},
+    index: {label:'INDEKS', sub:'jedn.'},
+    gold:  {label:'GOLD',  sub:'uncje'},
+    oil:   {label:'ROPA',  sub:'baryłki'},
+    stocks:{label:'AKCJE', sub:'sztuki'}
+  };
+
+  let state = {
+    instrument: 'index',
+    capital: 10000,
+    atr: 160,
+    unit: 'punktow',
+    risk: 2,
+    sl: 2,
+    currIdx: 1
+  };
+
+  function selectInstrument(id) {
+    state.instrument = id;
+    document.querySelectorAll('.inst-btn').forEach(b => b.classList.toggle('active', b.dataset.id === id));
+    calc();
+  }
+
+  function cycleCurrency() {
+    state.currIdx = (state.currIdx + 1) % currencies.length;
+    document.getElementById('currSym').textContent = symbols[state.currIdx];
+    document.getElementById('currBtn').textContent = currencies[state.currIdx];
+    calc();
+  }
+
+  function selectUnit(u) {
+    state.unit = u;
+    document.querySelectorAll('.unit-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('unit-' + u).classList.add('active');
+    calc();
+  }
+
+  function selectRisk(r) {
+    state.risk = r;
+    document.getElementById('riskSlider').value = r;
+    updateSlider(r);
+    document.querySelectorAll('.risk-btn').forEach(b => {
+      const v = parseFloat(b.textContent);
+      b.classList.toggle('active', v === r);
+    });
+    document.getElementById('riskDisplay').textContent = r.toFixed(1) + '%';
+    calc();
+  }
+
+  function onSlider(v) {
+    state.risk = parseFloat(v);
+    updateSlider(v);
+    document.getElementById('riskDisplay').textContent = parseFloat(v).toFixed(1) + '%';
+    document.querySelectorAll('.risk-btn').forEach(b => {
+      b.classList.toggle('active', parseFloat(b.textContent) === state.risk);
+    });
+    calc();
+  }
+
+  function updateSlider(v) {
+    const pct = (v / 10) * 100;
+    document.getElementById('riskSlider').style.setProperty('--val', pct + '%');
+  }
+
+  function selectSL(v) {
+    state.sl = v;
+    document.querySelectorAll('.sl-btn').forEach((b, i) => {
+      const vals = [1, 2, 2.5, 3];
+      b.classList.toggle('active', vals[i] === v);
+    });
+    calc();
+  }
+
+  function calc() {
+    state.capital = parseFloat(document.getElementById('capital').value) || 0;
+    state.atr = parseFloat(document.getElementById('atr').value) || 0;
+
+    const sym = symbols[state.currIdx];
+    const maxRisk = state.capital * state.risk / 100;
+    const sl = state.atr * state.sl;
+    const target = sl * 3;
+    const rr = sl > 0 ? (target / sl).toFixed(1) : '0';
+    const size = sl > 0 ? maxRisk / sl : 0;
+    const inst = instruments[state.instrument];
+
+    document.getElementById('res-atr').textContent = state.atr;
+    document.getElementById('sl-label').textContent = `STOP-LOSS (${state.sl}×N)`;
+    document.getElementById('res-sl').textContent = sl;
+    document.getElementById('res-risk').textContent = `${sym}${maxRisk.toLocaleString()}`;
+    document.getElementById('res-target').textContent = target;
+    document.getElementById('res-rr').textContent = `R:R 1:${rr}`;
+    document.getElementById('res-size').textContent = `${sym}${size.toFixed(2)}`;
+    document.getElementById('res-size-sub').textContent = `${sym}${size.toFixed(2)} / punkt`;
+
+    document.getElementById('summary').innerHTML =
+      `Instrument: <b class="hl-white">${inst.label} (${inst.sub})</b> · ` +
+      `ATR = <b class="hl-yellow">${state.atr}</b> (N) · ` +
+      `Stop-loss: <b class="hl-red">${sl} punktów</b> · ` +
+      `Ryzyko: <b class="hl-red">${sym}${maxRisk} (${state.risk}%)</b> · ` +
+      `Rozmiar: <b class="hl-yellow">${sym}${size.toFixed(2)} / punkt</b> · ` +
+      `Target: <b class="hl-blue">${target} punktów</b> (R:R 1:${rr})`;
+  }
+
+  calc();
+</script>
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js');
+  }
+</script>
+</body>
+</html>
